@@ -1,6 +1,5 @@
 import streamlit as st
 
-
 # 1. หัวข้อใหญ่: แนะนำตัวหลักและชื่อเจ้าของเว็บ
 st.title("✨ My Digital Profile")
 
