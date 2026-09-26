@@ -1,69 +1,80 @@
-def main():
-    # 1. กำหนดรายการสินค้าและราคาจากใบงาน
-    menu = {
-        1: {"name": "เซ็ตปกติ", "price": 199},
-        2: {"name": "เซ็ตกลาง", "price": 299},
-        3: {"name": "เซ็ตใหญ่", "price": 359},
-        4: {"name": "เซ็ตกินเอาตาย", "price": 1059}
-    }
+import streamlit as st
 
-    print("==========================================")
-    print("      ระบบคำนวณราคา ร้าน หลงล่า เยเกอร์      ")
-    print("==========================================")
-    for key, item in menu.items():
-        print(f"[{key}] {item['name']:<15} ราคา {item['price']:,} บาท")
-    print("------------------------------------------")
+# ตั้งค่าหน้าเว็บ
+st.set_page_config(page_title="หลงล่า เยเกอร์", page_icon="🍲", layout="centered")
 
-    total_qty = 0
-    subtotal = 0
-    order_details = []
+# ส่วนหัวของแอปพลิเคชัน
+st.title("🍲 ร้าน หลงล่า เยเกอร์")
+st.subheader("ระบบคำนวณราคาและส่วนลดประจำร้าน")
+st.write("---")
 
-    # 2. รับค่าจำนวนที่สั่งซื้อในแต่ละรายการ
-    for key, item in menu.items():
-        while True:
-            try:
-                qty_input = input(f"ระบุจำนวนที่สั่งซื้อ {item['name']} (กด Enter หากไม่ได้สั่ง): ")
-                qty = int(qty_input) if qty_input.strip() != "" else 0
-                if qty < 0:
-                    print("กรุณาระบุจำนวนเป็นตัวเลขที่ไม่ติดลบ")
-                    continue
-                break
-            except ValueError:
-                print("กรุณากรอกตัวเลขที่ถูกต้อง")
+# 1. กำหนดรายการสินค้าและราคาจากใบงาน
+menu = {
+    "เซ็ตปกติ": 199,
+    "เซ็ตกลาง": 299,
+    "เซ็ตใหญ่": 359,
+    "เซ็ตกินเอาตาย": 1059
+}
 
-        if qty > 0:
-            item_total = qty * item["price"]
-            total_qty += qty
-            subtotal += item_total
-            order_details.append(f"- {item['name']} x {qty} = {item_total:,} บาท")
+st.header("🛒 เลือกรายการอาหาร")
 
-    # 3. ตรวจสอบเงื่อนไขส่วนลด (กินครบ 5 เซ็ตขึ้นไป ลด 15%)
-    discount_rate = 0.15 if total_qty >= 5 else 0.0
+# 2. สร้างช่องให้ผู้ใช้ปรับเลือกจำนวนสินค้า
+order = {}
+total_qty = 0
+
+col1, col2 = st.columns(2)
+
+for i, (item_name, price) in enumerate(menu.items()):
+    # สลับแสดงรายการ 2 คอลัมน์ให้ดูสวยงาม
+    with col1 if i % 2 == 0 else col2:
+        qty = st.number_input(
+            label=f"{item_name} ({price:,} บาท)",
+            min_value=0,
+            value=0,
+            step=1,
+            key=item_name
+        )
+        order[item_name] = qty
+        total_qty += qty
+
+st.write("---")
+
+# 3. คำนวณราคาและส่วนลด
+subtotal = sum(menu[item] * qty for item, qty in order.items())
+
+# เงื่อนไขส่วนลด: กินครบ 5 เซ็ตขึ้นไป ลด 15%
+if total_qty >= 5:
+    discount_rate = 0.15
     discount_amount = subtotal * discount_rate
-    net_total = subtotal - discount_amount
+else:
+    discount_rate = 0.0
+    discount_amount = 0.0
 
-    # 4. แสดงผลสรุปรายการและใบเสร็จ
-    print("\n==========================================")
-    print("               สรุปรายการสั่งซื้อ            ")
-    print("==========================================")
-    if order_details:
-        for line in order_details:
-            print(line)
-    else:
-        print("ไม่มีรายการสั่งซื้อ")
+net_total = subtotal - discount_amount
 
-    print("------------------------------------------")
-    print(f"จำนวนรวมทั้งหมด    : {total_qty} เซ็ต")
-    print(f"ราคารวมก่อนส่วนลด  : {subtotal:,.2f} บาท")
+# 4. แสดงผลสรุปรายการและคำนวณราคา
+st.header("🧾 สรุปรายการสั่งซื้อ")
+
+if total_qty > 0:
+    for item_name, qty in order.items():
+        if qty > 0:
+            item_total = menu[item_name] * qty
+            st.write(f"- **{item_name}** x {qty} = {item_total:,} บาท")
+    
+    st.markdown("---")
+    
+    # แสดงตัวเลขสรุปด้วย Metric
+    c1, c2, c3 = st.columns(3)
+    c1.metric("จำนวนรวม", f"{total_qty} เซ็ต")
+    c2.metric("ราคารวม", f"{subtotal:,.2f} ฿")
+    c3.metric("ส่วนลด (15%)", f"-{discount_amount:,.2f} ฿" if discount_rate > 0 else "0.00 ฿")
 
     if total_qty >= 5:
-        print(f"ส่วนลดพิเศษ (15%)  : -{discount_amount:,.2f} บาท")
+        st.success("🎉 คุณได้รับส่วนลดพิเศษ 15% เนื่องจากสั่งซื้อครบ 5 เซ็ตขึ้นไป!")
     else:
-        print(f"ส่วนลด             : 0.00 บาท (สั่งไม่ครบ 5 เซ็ต)")
+        st.info(f"💡 สั่งเพิ่มอีก {5 - total_qty} เซ็ต เพื่อรับส่วนลดพิเศษ 15%")
 
-    print("------------------------------------------")
-    print(f"ยอดเงินสุทธิที่ต้องชำระ : {net_total:,.2f} บาท")
-    print("==========================================")
+    st.markdown(f"### **ยอดเงินสุทธิที่ต้องชำระ: :red[{net_total:,.2f}] บาท**")
 
-if __name__ == "__main__":
-    main()
+else:
+    st.info("กรุณาเลือกจำนวนเซ็ตอาหารด้านบนเพื่อคำนวณราคา")
